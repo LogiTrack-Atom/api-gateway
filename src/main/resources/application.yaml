@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: api-gateway
+  profiles:
+    default: dev
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev | prod
+    import: configserver:${CONFIG_SERVER_URL:http://localhost:8085}
+  cloud:
+    config:
+      label: ${CONFIG_LABEL:develop}
+      fail-fast: true
+      request-connect-timeout: 2000
+      request-read-timeout: 3000

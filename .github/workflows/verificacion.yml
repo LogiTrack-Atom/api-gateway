@@ -1,0 +1,48 @@
+name: Verificación de api-gateway
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verificacion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Preparar Java 25
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Ejecutar pruebas y generar JavaDoc
+        run: ./mvnw -B -ntp verify javadoc:javadoc
+      - name: Construir imagen de comprobación
+        run: docker build --tag logitrack/api-gateway:verificacion .
+      - name: Verificar usuario y salud del contenedor local
+        run: |
+          test "$(docker image inspect --format '{{.Config.User}}' logitrack/api-gateway:verificacion)" = '10001:10001'
+          docker run -d --name gateway-verificacion -e SPRING_PROFILES_ACTIVE=local logitrack/api-gateway:verificacion
+          for attempt in $(seq 1 40); do
+            status=$(docker inspect --format '{{.State.Health.Status}}' gateway-verificacion)
+            if [ "$status" = healthy ]; then exit 0; fi
+            if [ "$status" = unhealthy ]; then break; fi
+            sleep 3
+          done
+          docker logs gateway-verificacion
+          exit 1
+      - name: Retirar contenedor de comprobación
+        if: always()
+        run: docker rm -f gateway-verificacion || true
