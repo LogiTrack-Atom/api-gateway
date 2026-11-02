@@ -1,0 +1,23 @@
+server:
+  port: ${SERVER_PORT:8066}
+
+spring:
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false
+
+eureka:
+  client:
+    enabled: false
+
+logitrack:
+  config:
+    marker: api-gateway-local

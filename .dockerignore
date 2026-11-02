@@ -1,0 +1,11 @@
+.git
+.github
+.idea
+target
+src/test
+*.md
+.env
+.env.*
+**/*.pem
+**/*.key
+**/*.log
