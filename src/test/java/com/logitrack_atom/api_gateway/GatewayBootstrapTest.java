@@ -1,6 +1,7 @@
 package com.logitrack_atom.api_gateway;
 
 import com.logitrack_atom.api_gateway.config.ConfigMarkerProperties;
+import com.logitrack_atom.api_gateway.support.TestRsaKeys;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,7 +45,7 @@ class GatewayBootstrapTest {
                     .doesNotContain("components", "details", "marker", "password");
             for (String path : List.of("/actuator/env", "/actuator/configprops", "/actuator/gateway/routes",
                     "/applications/apisecurity/api/v1/auth/login", "/applications/apishipment/api/v1/envios")) {
-                assertThat(get(context, path).statusCode()).as(path).isEqualTo(404);
+                assertThat(get(context, path).statusCode()).as(path).isEqualTo(401);
             }
             assertThat(context.getClass().getName()).contains("Reactive");
         }
@@ -97,7 +98,8 @@ class GatewayBootstrapTest {
      */
     private static SpringApplicationBuilder application() {
         return new SpringApplicationBuilder(ApiGatewayApplication.class)
-                .properties("spring.main.banner-mode=off", "logging.level.root=ERROR");
+                .properties(java.util.Map.of("spring.main.banner-mode", "off", "logging.level.root", "ERROR",
+                        "JWT_PUBLIC_KEY_LOCATION", "file:" + TestRsaKeys.publicResource().getPath()));
     }
 
     /**
@@ -146,7 +148,12 @@ class GatewayBootstrapTest {
                 String body = "{\"name\":\"api-gateway\",\"profiles\":[\"" + profile
                         + "\"],\"label\":\"develop\",\"version\":\"fixture-sprint03\",\"propertySources\":[{"
                         + "\"name\":\"fixture/api-gateway-" + profile + ".yml\",\"source\":{"
-                        + "\"eureka.client.enabled\":false,\"spring.cloud.discovery.enabled\":false" + marker + "}}]}";
+                        + "\"eureka.client.enabled\":false,\"spring.cloud.discovery.enabled\":false,"
+                        + "\"logitrack.security.issuer\":\"logitrack-security\","
+                        + "\"logitrack.security.audience\":\"logitrack-api\","
+                        + "\"logitrack.security.access-token-ttl\":\"15m\","
+                        + "\"logitrack.security.clock-skew\":\"60s\","
+                        + "\"logitrack.security.public-key-location\":\"${JWT_PUBLIC_KEY_LOCATION}\"" + marker + "}}]}";
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type", "application/json");
                 exchange.sendResponseHeaders(200, bytes.length);

@@ -19,5 +19,11 @@ eureka:
     enabled: false
 
 logitrack:
+  security:
+    issuer: logitrack-security
+    audience: logitrack-api
+    access-token-ttl: 15m
+    clock-skew: 60s
+    public-key-location: ${JWT_PUBLIC_KEY_LOCATION}
   config:
     marker: api-gateway-local

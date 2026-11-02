@@ -31,10 +31,21 @@ jobs:
         run: ./mvnw -B -ntp verify javadoc:javadoc
       - name: Construir imagen de comprobación
         run: docker build --tag logitrack/api-gateway:verificacion .
+      - name: Preparar clave pública efímera de comprobación
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/gateway-keys"
+          openssl genpkey -quiet -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$RUNNER_TEMP/gateway-keys/private.pem"
+          openssl pkey -in "$RUNNER_TEMP/gateway-keys/private.pem" -pubout -out "$RUNNER_TEMP/gateway-keys/public.pem"
+          chmod 644 "$RUNNER_TEMP/gateway-keys/public.pem"
       - name: Verificar usuario y salud del contenedor local
         run: |
           test "$(docker image inspect --format '{{.Config.User}}' logitrack/api-gateway:verificacion)" = '10001:10001'
-          docker run -d --name gateway-verificacion -e SPRING_PROFILES_ACTIVE=local logitrack/api-gateway:verificacion
+          docker run -d --name gateway-verificacion \
+            -e SPRING_PROFILES_ACTIVE=local \
+            -e JWT_PUBLIC_KEY_LOCATION=file:/run/keys/public.pem \
+            --mount "type=bind,source=$RUNNER_TEMP/gateway-keys/public.pem,target=/run/keys/public.pem,readonly" \
+            logitrack/api-gateway:verificacion
           for attempt in $(seq 1 40); do
             status=$(docker inspect --format '{{.State.Health.Status}}' gateway-verificacion)
             if [ "$status" = healthy ]; then exit 0; fi
@@ -45,4 +56,6 @@ jobs:
           exit 1
       - name: Retirar contenedor de comprobación
         if: always()
-        run: docker rm -f gateway-verificacion || true
+        run: |
+          docker rm -f gateway-verificacion || true
+          rm -rf "$RUNNER_TEMP/gateway-keys"
