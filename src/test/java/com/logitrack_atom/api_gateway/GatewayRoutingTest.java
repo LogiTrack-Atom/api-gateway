@@ -36,6 +36,7 @@ class GatewayRoutingTest {
                     + " " + exchange.getRequestHeaders().getFirst("Authorization"));
             byte[] body = "{\"upstream\":true}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.getResponseHeaders().set("Location", "/api/v1/resources/42");
             exchange.sendResponseHeaders(201, body.length);
             try (var output = exchange.getResponseBody()) { output.write(body); }
             finally { exchange.close(); }
@@ -53,6 +54,8 @@ class GatewayRoutingTest {
             args.add(root + ".uri=lb://" + services[i].toUpperCase(java.util.Locale.ROOT) + "-SERVICE");
             args.add(root + ".predicates[0]=Path=/applications/api" + services[i] + "/**");
             args.add(root + ".filters[0]=StripPrefix=2");
+            args.add(root + ".filters[1]=RewriteResponseHeader=Location, ^/api/v1/(.*)$, /applications/api"
+                    + services[i] + "/api/v1/$1");
         }
         try (var context = new SpringApplicationBuilder(ApiGatewayApplication.class, RoutingDiscovery.class)
                 .properties("spring.main.banner-mode=off", "logging.level.root=ERROR").run(args.toArray(String[]::new));
@@ -69,6 +72,8 @@ class GatewayRoutingTest {
                         .POST(HttpRequest.BodyPublishers.ofString("{\"demo\":true}")).build(), HttpResponse.BodyHandlers.ofString());
                 assertThat(response.statusCode()).isEqualTo(201);
                 assertThat(response.body()).contains("upstream");
+                assertThat(response.headers().firstValue("Location"))
+                        .contains("/applications/api" + service + "/api/v1/resources/42");
                 assertThat(observed.get()).startsWith("POST " + path + "?demo=1 {\"demo\":true}");
                 if (!service.equals("security")) {
                     assertThat(observed.get()).endsWith("Bearer " + token);
