@@ -86,3 +86,92 @@ y los cambios integrados en develop. Genera claves efímeras de comprobación y 
 - Integrar con pruebas pertinentes y documentación de los cambios.
 
 El Compose general y los contratos se mantienen en [shipment-service](https://github.com/LogiTrack-Atom/shipment-service/tree/develop).
+
+
+## CORS del frontend · Sprint04
+
+`CORS_ALLOWED_ORIGINS` define una lista separada por comas de orígenes HTTP/HTTPS
+exactos, por ejemplo `http://localhost:5173,https://frontend.example.com`.
+Sin configuración, Gateway no autoriza solicitudes cross-origin. Se rechazan
+comodines, patrones, `null`, credenciales, rutas (también `/` final), query y fragmento.
+El origen remoto definitivo debe confirmarse con el hosting de frontend#2.
+
+La única política se aplica en Spring Security antes de JWT a `/applications/**`:
+GET, POST, PUT, PATCH y OPTIONS; cabeceras Authorization/Content-Type; Location
+expuesta al navegador; caché de preflight de 600 segundos; sin cookies ni Allow-Credentials. No agregar otro CorsWebFilter,
+CORS de Nginx ni globalcors en Gateway, porque duplicaría la configuración.
+Un OPTIONS válido no requiere Bearer; la petición de negocio conserva JWT, roles
+y pertenencia de los servicios. CORS no sustituye autorización ni bloquea clientes
+que no sean navegadores.
+
+En el proxy del mismo origen, conservar `/applications/` al reenviar al Gateway:
+
+```nginx
+location /applications/ {
+    proxy_pass http://gateway:8066;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_intercept_errors off;
+}
+location / {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+No añadir `/` al final de proxy_pass: cambiaría la ruta enviada. El bloque de API
+no lleva fallback SPA ni cabeceras CORS. En producción, usar el destino interno
+acordado y el origen/TLS público del hosting; el ejemplo no los configura por sí solo.
+La preparación de red no aprueba G0 ni la integración funcional del frontend.
+
+
+### Evidencia de #8 · 2026-11-09
+
+En checkout aislado de develop `283cbf80423705b3768787b77c8d35f9a0fd6305`, con
+Java 25.0.4.1, Boot 4.1.1 y Cloud 2025.1.4:
+
+```sh
+bash mvnw -B -ntp -o verify javadoc:javadoc
+```
+
+Resultado: **162 casos, cero fallos/errores/omisiones**, incluidos 17 casos CORS
+nuevos; JavaDoc de producción con doclint y warnings fatales. Las clases y métodos
+nuevos de prueba también están documentados, aunque este goal no genera test-javadoc.
+`GatewayCorsTest` inicia Gateway y un proveedor HTTP propios, valida allowlist,
+preflight antes de JWT, PATCH, 401, cabeceras/métodos rechazados, configuración
+por defecto cerrada y ausencia de credenciales CORS. La regresión completa verifica
+además las rutas y roles anteriores; no se sustituyó el decoder por un mock.
+
+La aceptación adicional abrió un navegador real frente a Nginx en loopback y
+Gateway ejecutado desde el JAR construido. El origen permitido se inyectó mediante
+`CORS_ALLOWED_ORIGINS`. Se usaron RSA/JWT efímeros y un proveedor HTTP ficticio sin
+base de datos; no acredita las reglas de dominio ni el hosting definitivo de Gab.
+
+| Comprobación del navegador | Resultado |
+| --- | --- |
+| PATCH cross-origin con JWT válido; preflight automático | 200, cuerpo EN_RUTA |
+| Location leída desde JavaScript | /applications/apishipment/api/v1/envios/42 |
+| Negocio anónimo cross-origin | 401 legible por el origen autorizado |
+| PATCH por proxy del mismo origen | 200 |
+| Recurso inexistente por proxy | 404 JSON, sin fallback index.html |
+| Negocio anónimo por proxy | 401 |
+| PATCH desde otro puerto/origen no permitido | Fetch bloqueado por CORS |
+
+El proveedor observó exactamente dos PATCH (directo y por proxy) y dos GET 404
+(sondeo inicial del proxy y navegador), todos con Bearer. Ningún OPTIONS ni petición
+anónima/ajena alcanzó ese proveedor. Nginx no agrega cabeceras CORS y conserva el
+prefijo al enviar a Gateway; StripPrefix=2 se aplica una vez en Gateway.
+
+Imagen oficial de Nginx utilizada en ese laboratorio:
+`nginx@sha256:583b7f2fce1cdb8da5ad5c39ebd3c33b98b87d493190e548bdee1fa8c619c311`.
+Los servidores, páginas con credenciales ficticias, claves y contenedor del ensayo
+se retiraron; los contenedores previos quedaron conservados. No se modificó el
+servicio del equipo ni su configuración. El origen público/TLS y la integración de
+negocio continúan sujetos al traspaso del hosting y a las decisiones pendientes de G0.
+
+Para reproducir la comprobación de navegador sobre un laboratorio autorizado:
+servir la SPA con el bloque Nginx anterior, configurar su origen exacto en Gateway,
+probar un PATCH con JWT emitido por el security del laboratorio y comprobar en la
+pestaña de red el OPTIONS sin Authorization, la respuesta CORS y el PATCH posterior.
+Repetir desde un origen ajeno, sin credencial y por el proxy del mismo origen;
+comprobar que el 404 de una ruta de API existente con ID inexistente sigue siendo
+JSON. No usar JWT del equipo ni convertir el proveedor ficticio en aceptación de datos.
