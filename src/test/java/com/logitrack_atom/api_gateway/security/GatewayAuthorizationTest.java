@@ -92,6 +92,18 @@ class GatewayAuthorizationTest {
         }
     }
 
+    /** Solo POST de los tres endpoints de cookie llega al servicio; allí se verifica CSRF. */
+    @ParameterizedTest
+    @ValueSource(strings = {"/auth/session", "/auth/session/refresh", "/auth/session/logout"})
+    void sesionNavegadorTieneRutaPublicaEspecifica(String suffix) throws Exception {
+        var request = HttpRequest.newBuilder(URI.create(baseUrl + SECURITY + suffix))
+                .header("Origin", baseUrl).header("X-LogiTrack-Session", "1")
+                .POST(HttpRequest.BodyPublishers.noBody()).build();
+        assertThat(client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(200);
+        var get = HttpRequest.newBuilder(URI.create(baseUrl + SECURITY + suffix)).GET().build();
+        assertThat(client.send(get, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(401);
+    }
+
     /** Libera ambos servidores y sus conexiones al terminar la suite. */
     @AfterAll
     static void stop() {

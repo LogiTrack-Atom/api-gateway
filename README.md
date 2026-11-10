@@ -175,3 +175,20 @@ pestaña de red el OPTIONS sin Authorization, la respuesta CORS y el PATCH poste
 Repetir desde un origen ajeno, sin credencial y por el proxy del mismo origen;
 comprobar que el 404 de una ruta de API existente con ID inexistente sigue siendo
 JSON. No usar JWT del equipo ni convertir el proveedor ficticio en aceptación de datos.
+
+## Sesión renovable del navegador (security-service#11)
+
+POST de `/applications/apisecurity/api/v1/auth/session`, `/refresh` y `/logout`
+se reenvían públicamente al servicio de seguridad, que exige Origin exacto y
+`X-LogiTrack-Session: 1`. El resto del negocio sigue con Bearer. No se agregan rutas
+GET de sesión, cookies cross-origin ni cabeceras CORS con credenciales.
+
+Para un proxy HTTPS que termina TLS antes de Gateway, fijar
+`CORS_ALLOWED_ORIGINS` al mismo origen público exacto de `SESSION_ORIGIN`; evita
+confundir el origen público con el transporte HTTP interno. La cabecera de sesión
+no se agrega a la allowlist cross-origin: esta funcionalidad usa Nginx del mismo origen.
+
+Las tres rutas POST y la denegación GET se prueban con Gateway HTTP real y proveedor
+controlado. La integración completa con Security nuevo, cookies, rotación y Nginx
+se probó en el proyecto descartable `lt-s04-session11`. No publica imágenes ni cambia
+el label centralizado o los demás contratos.

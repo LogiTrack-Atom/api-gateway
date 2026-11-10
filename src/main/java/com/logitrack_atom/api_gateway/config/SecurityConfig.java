@@ -53,7 +53,8 @@ public class SecurityConfig {
                 .requestCache(cache -> cache.requestCache(NoOpServerRequestCache.getInstance()))
                 .authorizeExchange(auth -> auth
                         .pathMatchers(HttpMethod.GET, "/actuator/health").permitAll()
-                        .pathMatchers(HttpMethod.POST, SECURITY + "/auth/login", SECURITY + "/auth/register").permitAll()
+                        .pathMatchers(HttpMethod.POST, SECURITY + "/auth/login", SECURITY + "/auth/register",
+                                SECURITY + "/auth/session", SECURITY + "/auth/session/refresh", SECURITY + "/auth/session/logout").permitAll()
                         .pathMatchers(HttpMethod.GET, SECURITY + "/auth/me").hasAnyRole("ADMIN", "CLIENTE", "REPARTIDOR")
                         .pathMatchers(HttpMethod.POST, SECURITY + "/usuarios").hasRole("ADMIN")
                         .pathMatchers(HttpMethod.GET, SECURITY + "/usuarios/{id}").hasRole("ADMIN")
