@@ -103,6 +103,19 @@ class GatewayCorsTest {
     }
 
     /**
+     * La cabecera de idempotencia puede atravesar el preflight sin habilitar headers arbitrarios.
+     * @throws Exception si falla el transporte del fixture HTTP
+     */
+    @Test
+    void permitsIdempotencyKeyForAsyncAcceptance() throws Exception {
+        int before = CALLS.get();
+        var response = preflight(ORIGIN, "POST", "authorization,content-type,idempotency-key");
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.headers().firstValue("Access-Control-Allow-Headers").orElse("").toLowerCase()).contains("idempotency-key");
+        assertThat(CALLS.get()).isEqualTo(before);
+    }
+
+    /**
      * Un origen no declarado no recibe permiso CORS ni llega al proveedor.
      * @param origin origen ajeno o no representable
      * @throws Exception si falla el transporte HTTP

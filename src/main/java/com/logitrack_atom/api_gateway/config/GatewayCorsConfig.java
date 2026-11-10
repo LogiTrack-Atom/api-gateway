@@ -32,7 +32,7 @@ public class GatewayCorsConfig {
         CorsConfiguration policy = new CorsConfiguration();
         policy.setAllowedOrigins(origins.allowedOrigins());
         policy.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "OPTIONS"));
-        policy.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        policy.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key"));
         policy.setExposedHeaders(List.of("Location"));
         policy.setAllowCredentials(false);
         policy.setMaxAge(600L);
