@@ -5,6 +5,7 @@ import com.logitrack_atom.api_gateway.security.StrictBearerTokenConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
@@ -36,12 +37,15 @@ public class SecurityConfig {
      * @param decoder verificador criptográfico local
      * @param converter conversor de roles validados
      * @param errors escritor de ApiError
+     * @param corsSource política CORS explícita, aplicada antes de autenticar
      * @return filtros de autenticación y autorización de Gateway
      */
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, ReactiveJwtDecoder decoder,
-            ReactiveJwtAuthenticationConverterAdapter converter, SecurityErrorWriter errors) {
-        return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
+            ReactiveJwtAuthenticationConverterAdapter converter, SecurityErrorWriter errors,
+            CorsConfigurationSource corsSource) {
+        return http.cors(cors -> cors.configurationSource(corsSource))
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .logout(ServerHttpSecurity.LogoutSpec::disable)
