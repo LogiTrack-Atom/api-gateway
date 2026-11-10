@@ -152,6 +152,8 @@ class GatewayAuthorizationTest {
                 rule("GET", SHIPMENT + "/envios/" + RESOURCE, all),
                 rule("GET", SHIPMENT + "/envios/seguimiento/LT-PRUEBA", all),
                 rule("GET", SHIPMENT + "/envios/" + RESOURCE + "/historial", all),
+                rule("POST", SHIPMENT + "/envios/" + RESOURCE + "/solicitudes-asignacion", admin),
+                rule("GET", SHIPMENT + "/operaciones-asignacion/" + RESOURCE, admin),
                 rule("POST", SHIPMENT + "/envios", customer),
                 rule("PATCH", SHIPMENT + "/envios/" + RESOURCE + "/estado", driver),
                 rule("PATCH", SHIPMENT + "/envios/" + RESOURCE + "/cancelacion", admin),

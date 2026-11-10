@@ -61,6 +61,8 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, SHIPMENT + "/envios", SHIPMENT + "/envios/{id}",
                                 SHIPMENT + "/envios/seguimiento/{codigo}", SHIPMENT + "/envios/{id}/historial")
                             .hasAnyRole("ADMIN", "CLIENTE", "REPARTIDOR")
+                        .pathMatchers(HttpMethod.POST, SHIPMENT + "/envios/{id}/solicitudes-asignacion").hasRole("ADMIN")
+                        .pathMatchers(HttpMethod.GET, SHIPMENT + "/operaciones-asignacion/{id}").hasRole("ADMIN")
                         .pathMatchers(HttpMethod.POST, SHIPMENT + "/envios").hasAnyRole("ADMIN", "CLIENTE")
                         .pathMatchers(HttpMethod.PATCH, SHIPMENT + "/envios/{id}/estado").hasAnyRole("ADMIN", "REPARTIDOR")
                         .pathMatchers(HttpMethod.PATCH, SHIPMENT + "/envios/{id}/cancelacion").hasRole("ADMIN")
